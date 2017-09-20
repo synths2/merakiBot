@@ -26,7 +26,6 @@ def getOrganisations(baseURL, headers):
 
 def getNetworks(baseURL, headers, orgID):
     url = baseURL + "/organizations/" + str(orgID) + "/networks"
-    print url
     response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
     if response.status_code == 200:
         return response.text
@@ -42,8 +41,39 @@ def getNetworks(baseURL, headers, orgID):
         print "There was an issue with your request. Here is the error text:\n" + response.text
 
 
-def findClientDetails(baseURL, headers, clientIP):
-    pass
+def getDevices(baseURL, headers, networkID):
+    url = baseURL + "/networks/" + str(networkID) + "/devices"
+    response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+    if response.status_code == 200:
+        return response.text
+    elif response.status_code in [302, 307, 308]:
+        url = response.text.find(sub='https')
+        print "redirecting to: " + url
+        response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+        if response.status_code == 200:
+            return response.text
+        else:
+            print "There was an issue with your request. Here is the error text:\n" + response.text
+    else:
+        print "There was an issue with your request. Here is the error text:\n" + response.text
+
+
+def findClientDetails(baseURL, headers, deviceID, timespan="86400"):
+    url = baseURL + "/devices/" + str(deviceID) + "/clients" + "?timespan=" + timespan
+    response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+    if response.status_code == 200:
+        return response.text
+    elif response.status_code in [302, 307, 308]:
+        url = response.text.find(sub='https')
+        print "redirecting to: " + url
+        response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+        if response.status_code == 200:
+            return response.text
+        else:
+            print "There was an issue with your request. Here is the error text:\n" + response.text
+    else:
+        print "There was an issue with your request. Here is the error text:\n" + response.text
+
 
 if __name__ == "__main__":
     baseURL = "https://dashboard.meraki.com/api/v" + apiVersion

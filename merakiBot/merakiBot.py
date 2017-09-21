@@ -37,15 +37,6 @@ def getNetworkIDs(baseURL, headers, orgID):
             emptynet['id'] = net['id']
             nlist.append(emptynet)
         return nlist
-
-    elif response.status_code in [302, 307, 308]:
-        url = response.text.find(sub='https')
-        print "redirecting to: " + url
-        response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
-        if response.status_code == 200:
-            return response.text
-        else:
-            print "There was an issue with your request. Here is the error text:\n" + response.text
     else:
         print "There was an issue with your request. Here is the error text:\n" + response.text
 
@@ -66,50 +57,10 @@ def getDevices(baseURL, headers, networkID):
                 emptydev['name'] = dev['name']
                 emptydev['serial'] = dev['serial']
                 dlist.append(emptydev)
-
-        elif response.status_code in [302, 307, 308]:
-            url = response.text.find(sub='https')
-            print "redirecting to: " + url
-            response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
-            if response.status_code == 200:
-                return response.text
-            else:
-                print "There was an issue with your request. Here is the error text:\n" + response.text
         else:
             print "There was an issue with your request. Here is the error text:\n" + response.text
     return dlist
 
-
-def getClientDetails(baseURL, headers, deviceID, timespan="86400"):
-    print "Getting clients..."
-    clist = []
-    for dev in deviceID:
-        devID = dev['serial']
-        url = baseURL + "/devices/" + str(devID) + "/clients?timespan=" + timespan
-        response = requests.get(url=url, headers=headers, verify=False)
-        if response.status_code == 200:
-            clients = json.loads(response.text)
-
-            for client in clients:
-                emptycli = {}
-                emptycli['description'] = client['description']
-                emptycli['ip'] = client['ip']
-                emptycli['mac'] = client['mac']
-                clist.append(emptycli)
-
-
-        elif response.status_code in [302, 307, 308]:
-            url = response.text.find(sub='https')
-            print "redirecting to: " + url
-            response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
-            if response.status_code == 200:
-                return response.text
-            else:
-                print "There was an issue with your request. Here is the error text:\n" + response.text
-        else:
-            print "There was an issue with your request. Here is the error text:\n" + response.text
-    dedupe = [i for n, i in enumerate(clist) if i not in clist[n + 1:]]
-    return dedupe
 
 def getClientDetails2(baseURL, headers, deviceID, timespan="86400"):
     print "Getting clients..."

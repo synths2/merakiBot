@@ -4,7 +4,7 @@
 #
 
 import requests, json, logging
-from merakiConfig import apiKey,apiVersion
+from merakiConfig import apiKey, apiVersion, verifySSL
 
 
 def getOrganisations(baseURL, headers):
@@ -80,22 +80,59 @@ def getDevices(baseURL, headers, networkID):
     return dlist
 
 
-def findClientDetails(baseURL, headers, deviceID, timespan="86400"):
-    url = baseURL + "/devices/" + str(deviceID) + "/clients" + "?timespan=" + timespan
-    response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
-    if response.status_code == 200:
-
-        return response.text
-    elif response.status_code in [302, 307, 308]:
-        url = response.text.find(sub='https')
-        print "redirecting to: " + url
-        response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+def getClientDetails(baseURL, headers, deviceID, timespan="86400"):
+    print "Getting clients..."
+    clist = []
+    for dev in deviceID:
+        devID = dev['serial']
+        url = baseURL + "/devices/" + str(devID) + "/clients?timespan=" + timespan
+        response = requests.get(url=url, headers=headers, verify=False)
         if response.status_code == 200:
-            return response.text
+            clients = json.loads(response.text)
+
+            for client in clients:
+                emptycli = {}
+                emptycli['description'] = client['description']
+                emptycli['ip'] = client['ip']
+                emptycli['mac'] = client['mac']
+                clist.append(emptycli)
+
+
+        elif response.status_code in [302, 307, 308]:
+            url = response.text.find(sub='https')
+            print "redirecting to: " + url
+            response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+            if response.status_code == 200:
+                return response.text
+            else:
+                print "There was an issue with your request. Here is the error text:\n" + response.text
         else:
             print "There was an issue with your request. Here is the error text:\n" + response.text
-    else:
-        print "There was an issue with your request. Here is the error text:\n" + response.text
+    dedupe = [i for n, i in enumerate(clist) if i not in clist[n + 1:]]
+    return dedupe
+
+def getClientDetails2(baseURL, headers, deviceID, timespan="86400"):
+    print "Getting clients..."
+    s = requests.Session()
+    s.headers.update(headers)
+    s.verify = verifySSL
+    clist = []
+    for dev in deviceID:
+        devID = dev['serial']
+        url = baseURL + "/devices/" + str(devID) + "/clients?timespan=" + timespan
+        response = s.get(url=url)
+        if response.status_code == 200:
+            clients = json.loads(response.text)
+            for client in clients:
+                emptycli = {}
+                emptycli['description'] = client['description']
+                emptycli['ip'] = client['ip']
+                emptycli['mac'] = client['mac']
+                clist.append(emptycli)
+        else:
+            print "There was an issue with your request. HTTP Code was:" + response.status_code + ". Here is the error text:\n" + response.text
+    dedupe = [i for n, i in enumerate(clist) if i not in clist[n + 1:]]
+    return dedupe
 
 
 if __name__ == "__main__":
@@ -107,3 +144,5 @@ if __name__ == "__main__":
     networkIDs = getNetworkIDs(baseURL, headers, organisationID)
     print len(networkIDs)
     devices = getDevices(baseURL, headers, networkIDs)
+    clients = getClientDetails2(baseURL, headers, devices)
+

@@ -9,13 +9,13 @@ from merakiConfig import apiKey,apiVersion
 
 def getOrganisations(baseURL, headers):
     url = baseURL + "/organizations"
-    response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+    response = requests.get(url=url, headers=headers, verify= False)
     if response.status_code == 200:
         return response.text
     elif response.status_code  in [302,307,308]:
         url = response.text.find(sub='https')
         print "redirecting to: " + url
-        response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+        response = requests.get(url=url, headers=headers, verify=False)
         if response.status_code  == 200:
             return response.text
         else:
@@ -24,11 +24,20 @@ def getOrganisations(baseURL, headers):
         print "There was an issue with your request. Here is the error text:\n" + response.text
 
 
-def getNetworks(baseURL, headers, orgID):
+def getNetworkIDs(baseURL, headers, orgID):
+    print "Getting networks..."
     url = baseURL + "/organizations/" + str(orgID) + "/networks"
-    response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+    response = requests.get(url=url, headers=headers, verify=False)
+    networkIDs = json.loads(response.text)
     if response.status_code == 200:
-        return response.text
+        nlist = []
+        for net in networkIDs:
+            emptynet = {}
+            emptynet['name'] = net['name']
+            emptynet['id'] = net['id']
+            nlist.append(emptynet)
+        return nlist
+
     elif response.status_code in [302, 307, 308]:
         url = response.text.find(sub='https')
         print "redirecting to: " + url
@@ -42,26 +51,40 @@ def getNetworks(baseURL, headers, orgID):
 
 
 def getDevices(baseURL, headers, networkID):
-    url = baseURL + "/networks/" + str(networkID) + "/devices"
-    response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
-    if response.status_code == 200:
-        return response.text
-    elif response.status_code in [302, 307, 308]:
-        url = response.text.find(sub='https')
-        print "redirecting to: " + url
-        response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+    print "Getting devices..."
+    print "number of networks:" + str(len(networkID))
+    dlist = []
+    for net in networkID:
+        netID = net['id']
+        url = baseURL + "/networks/" + str(netID) + "/devices"
+        response = requests.get(url=url, headers=headers, verify=False)
         if response.status_code == 200:
-            return response.text
+            deviceIDs = json.loads(response.text)
+
+            for dev in deviceIDs:
+                emptydev = {}
+                emptydev['name'] = dev['name']
+                emptydev['serial'] = dev['serial']
+                dlist.append(emptydev)
+
+        elif response.status_code in [302, 307, 308]:
+            url = response.text.find(sub='https')
+            print "redirecting to: " + url
+            response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
+            if response.status_code == 200:
+                return response.text
+            else:
+                print "There was an issue with your request. Here is the error text:\n" + response.text
         else:
             print "There was an issue with your request. Here is the error text:\n" + response.text
-    else:
-        print "There was an issue with your request. Here is the error text:\n" + response.text
+    return dlist
 
 
 def findClientDetails(baseURL, headers, deviceID, timespan="86400"):
     url = baseURL + "/devices/" + str(deviceID) + "/clients" + "?timespan=" + timespan
     response = requests.get(url=url, headers=headers, verify='./global-legal-root.crt.cer')
     if response.status_code == 200:
+
         return response.text
     elif response.status_code in [302, 307, 308]:
         url = response.text.find(sub='https')
@@ -81,5 +104,6 @@ if __name__ == "__main__":
     organisations = json.loads(getOrganisations(baseURL, headers))
     organisationID = organisations[0]['id']
     print "organisationID = " + str(organisationID)
-    networks = json.loads(getNetworks(baseURL, headers, organisationID))
-    print json.dumps(networks)
+    networkIDs = getNetworkIDs(baseURL, headers, organisationID)
+    print len(networkIDs)
+    devices = getDevices(baseURL, headers, networkIDs)

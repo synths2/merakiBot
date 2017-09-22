@@ -1,0 +1,4 @@
+# rename this from .sample to .py
+apiVersion = "0"
+apiKey = "your meraki API key here"
+verifySSL = 'your CA cert location here or "False" or "True"'

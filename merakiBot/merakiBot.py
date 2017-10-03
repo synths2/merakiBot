@@ -9,7 +9,7 @@ from merakiConfig import apiKey, apiVersion, verifySSL
 
 def getOrganisations(baseURL, headers):
     url = baseURL + "/organizations"
-    response = requests.get(url=url, headers=headers, verify= False)
+    response = requests.get(url=url, headers=headers, verify= verifySSL)
     if response.status_code == 200:
         return response.text
     elif response.status_code  in [302,307,308]:
@@ -27,7 +27,7 @@ def getOrganisations(baseURL, headers):
 def getNetworkIDs(baseURL, headers, orgID):
     print "Getting networks..."
     url = baseURL + "/organizations/" + str(orgID) + "/networks"
-    response = requests.get(url=url, headers=headers, verify=False)
+    response = requests.get(url=url, headers=headers, verify=verifySSL)
     networkIDs = json.loads(response.text)
     if response.status_code == 200:
         nlist = []
@@ -80,7 +80,7 @@ def getClientDetails2(baseURL, headers, deviceID, timespan="86400"):
             clients = json.loads(response.text)
             i=0
             for client in clients:
-                print "client number: " + i
+                print "client number: " + str(i)
                 i=i+1
                 emptycli = {}
                 emptycli['description'] = client['description']
@@ -112,7 +112,7 @@ def getGroupPolicies(baseURL, headers, networkID):
             emptydev['groupPolicyId'] = policy['groupPolicyId']
             plist.append(emptydev)
     else:
-         print "There was an issue with your request. Here is the error text:\n" + response.text
+        print "There was an issue with your request. HTTP Code was:" + response.status_code + ". Here is the error text:\n" + response.text
     s.close()
     return plist
 
@@ -132,9 +132,49 @@ def getClientPolicy(baseURL, headers, networkID, clientMAC, timespan = "86400"):
     return json.dumps(policyID)
 
 
+def setClientPolicy(baseURL, headers, networkID, clientMAC, timespan = "86400", policy="Normal", policyid = ""):
+    s = requests.Session()
+    s.headers.update(headers)
+    s.verify = verifySSL
+    url = baseURL + "/networks/" + str(networkID) + "/clients/" + str(clientMAC) + "/policy?timespan=" + timespan
+    if policy not in ('whitelisted', 'blocked', 'normal', 'group'):
+        raise ValueError('Parameter policy must be either whitelisted, blocked, normal, or group with ID specified')
+    if policy == 'group' and policyid == None:
+        raise ValueError('Parameter policy must be either whitelisted, blocked, normal, or group with ID specified')
+
+    putdata = {'devicePolicy': policy, 'groupPolicyId': ""}
+    response = s.put(url=url,data=json.dumps(putdata))
+    if response.status_code == 200:
+        policyResult = json.loads(response.text)
+    else:
+        print "There was an issue with your request. Here is the error text:\n" + response.text
+    s.close()
+    return policyResult
+
+
+def getclientsplash(baseURL, headers, networkID, clientMAC):
+    s = requests.Session()
+    s.headers.update(headers)
+    s.verify = verifySSL
+    geturl = '{0}/networks/{1}/clients/{2}/splashAuthorizationStatus'.format(str(baseURL), str(networkID), str(clientMAC))
+    splash = s.get(geturl, headers=headers)
+    return splash.text
+
+
+def updateclientsplash(baseURL, headers, networkID, clientMAC, ssid_authorization):
+    # ssid_authorization = {'ssids': {'0': {'isAuthorized': True}, '2': {'isAuthorized': False}}}
+    s = requests.Session()
+    s.headers.update(headers)
+    s.verify = verifySSL
+    puturl = '{0}/networks/{1}/clients/{2}/splashAuthorizationStatus'.format(str(baseURL), str(networkID), str(clientMAC))
+    putdata = ssid_authorization
+    dashboard = s.put(puturl, data=json.dumps(putdata))
+    return dashboard.text
+
+
 if __name__ == "__main__":
     baseURL = "https://dashboard.meraki.com/api/v" + apiVersion
-    headers = {"X-Cisco-Meraki-API-Key" : apiKey}
+    headers = {'X-Cisco-Meraki-API-Key' : apiKey, 'content-type': "application/json"}
     organisations = json.loads(getOrganisations(baseURL, headers))
     organisationID = organisations[0]['id']
     print "organisationID = " + str(organisationID)
@@ -142,6 +182,6 @@ if __name__ == "__main__":
     devices = getDevices(baseURL, headers, networkIDs)
     clients = getClientDetails2(baseURL, headers, devices)
     client = next((item for item in clients if item["ip"] == "172.30.22.41"), "Not found")
-    groupPolicies = getGroupPolicies(baseURL, headers, networkIDs)
+
 
 

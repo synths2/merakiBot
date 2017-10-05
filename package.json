@@ -1,0 +1,24 @@
+
+{
+  "name": "NetOpsBot",
+  "version": "0.0.1",
+  "description": "Slackbot for finding and blocking devices",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "DEL",
+  "license": "MIT",
+  "dependencies": {
+    "beepboop-persist": "^0.2.1",
+    "express": "^4.14.0",
+    "moment": "^2.17.1",
+    "moment-timezone": "^0.5.11",
+    "needle": "^1.4.3",
+    "slack-message-builder": "1.1.0",
+    "slapp": "2.4.1",
+    "slapp-context-beepboop": "1.4.0",
+    "slapp-convo-beepboop": "^1.0.1",
+    "uuid": "^3.0.1"
+  }
+}
